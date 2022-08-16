@@ -6,7 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"log"
+	"time"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
+	// "github.com/hyperledger/fabric-chaincode-go/shim"
 )
 
 // 2. chaincode struct
@@ -20,6 +24,13 @@ type Car struct{
 	Model string `json:"model"`
 	Colour string `json:"colour"`
 	Owner string `json:"owner"`
+}
+
+type HistoryQueryResult struct {
+	Record *Car `json:"record"`
+	TxId string `json:"txId"`
+	Timestamp time.Time`json:"timestamp"`
+	IsDelete bool `json:"isDelete"`
 }
 
 type QueryResult struct {
@@ -181,6 +192,49 @@ func (s *SmartContract) QueryAllCars(ctx contractapi.TransactionContextInterface
 	return results, nil
 }
 
+// GetAssetHistory Shadow Coding for additional chaincode features
+func (s *SmartContract) GetHistoryForCar(ctx contractapi.TransactionContextInterface, carID string) ([]HistoryQueryResult, error) {
+	log.Printf("GetHistoryForCar: ID %v", carID)
+
+	resultsIterator, err := ctx.GetStub().GetHistoryForKey(carID)
+	if err != nil {
+		return nil, err
+	}
+	defer resultsIterator.Close()
+
+	var records []HistoryQueryResult
+	for resultsIterator.HasNext() {
+		response, err := resultsIterator.Next()
+		if err != nil {
+			return nil, err
+		}
+
+		var car Car
+		if len(response.Value) > 0 {
+			err = json.Unmarshal(response.Value, &car)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			car = Car {}
+		}
+
+		timestamp, err := ptypes.Timestamp(response.Timestamp)
+		if err != nil {
+			return nil, err
+		}
+
+		record := HistoryQueryResult{
+			TxId: response.TxId,
+			Timestamp: timestamp,
+			Record: &car,
+			IsDelete: response.IsDelete,
+		}
+		records = append(records, record)
+	}
+	return records, nil
+
+}
 // 5. main
 func main() {
 	chaincode, err := contractapi.NewChaincode(new(SmartContract))

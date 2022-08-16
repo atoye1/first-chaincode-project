@@ -6,6 +6,8 @@
 
 'use strict';
 
+const fs = require('fs');
+
 const { Gateway, Wallets } = require('fabric-network');
 const FabricCAServices = require('fabric-ca-client');
 const path = require('path');
@@ -45,8 +47,8 @@ function prettyJSONString(inputString) {
 
 // NOTE: If you see  kind an error like these:
 /*
-    2020-08-07T20:23:17.590Z - error: [DiscoveryService]: send[mychannel] - Channel:mychannel received discovery error:access denied
-    ******** FAILED to run the application: Error: DiscoveryService: mychannel error: access denied
+	2020-08-07T20:23:17.590Z - error: [DiscoveryService]: send[mychannel] - Channel:mychannel received discovery error:access denied
+	******** FAILED to run the application: Error: DiscoveryService: mychannel error: access denied
 
    OR
 
@@ -70,6 +72,7 @@ function prettyJSONString(inputString) {
  *        export HFC_LOGGING='{"debug":"console"}'
  */
 async function main() {
+	let result;
 	try {
 		// build an in memory object with the network configuration (also known as a connection profile)
 		const ccp = buildCCPOrg1();
@@ -114,73 +117,78 @@ async function main() {
 			// This type of transaction would only be run once by an application the first time it was started after it
 			// deployed the first time. Any updates to the chaincode deployed later would likely not need to run
 			// an "init" type function.
-            try {
-                console.log('\n--> Submit Transaction: CreateCar creates new car with ID, make, model, color, owner arguments');
-                await contract.submitTransaction('CreateCar','CAR999', 'galaxy', 'galaxy_train', 'black', 'metel'); 
-                console.log('*** Result: committed');
-            } catch {
-                console.log("Error while creating new car as CAR300");
-            }
+			// await contract.submitTransaction('InitLedger');
+			// try {
+			// 	console.log('\n--> Submit Transaction: CreateCar creates new car with ID, make, model, color, owner arguments');
+			// 	await contract.submitTransaction('CreateCar', 'CAR999', 'galaxy', 'galaxy_train', 'black', 'metel');
+			// 	console.log('*** Result: committed');
+			// } catch {
+			// 	console.log("Error while creating new car as CAR300");
+			// }
 
 			// Let's try a query type operation (function).
 			// This will be sent to just one peer and the results will be shown.
-			console.log('\n--> Evaluate Transaction: GetAllAssets, function returns all the current assets on the ledger');
-			let result = await contract.evaluateTransaction('QueryCar','CAR999'); // TODO QueryCar, CAR200, and intentional error making also recommended
-			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
-/*
-			// Now let's try to submit a transaction.
-			// This will be sent to both peers and if both peers endorse the transaction, the endorsed proposal will be sent
-			// to the orderer to be committed by each of the peer's to the channel ledger.
-			console.log('\n--> Submit Transaction: CreateAsset, creates new asset with ID, color, owner, size, and appraisedValue arguments');
-			result = await contract.submitTransaction('CreateAsset', 'asset13', 'yellow', '5', 'Tom', '1300');
-			console.log('*** Result: committed');
-			if (`${result}` !== '') {
-				console.log(`*** Result: ${prettyJSONString(result.toString())}`);
-			}
-
-			console.log('\n--> Evaluate Transaction: ReadAsset, function returns an asset with a given assetID');
-			result = await contract.evaluateTransaction('ReadAsset', 'asset13');
-			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
-
-			console.log('\n--> Evaluate Transaction: AssetExists, function returns "true" if an asset with given assetID exist');
-			result = await contract.evaluateTransaction('AssetExists', 'asset1');
-			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
-
-			console.log('\n--> Submit Transaction: UpdateAsset asset1, change the appraisedValue to 350');
-			await contract.submitTransaction('UpdateAsset', 'asset1', 'blue', '5', 'Tomoko', '350');
-			console.log('*** Result: committed');
-
-			console.log('\n--> Evaluate Transaction: ReadAsset, function returns "asset1" attributes');
-			result = await contract.evaluateTransaction('ReadAsset', 'asset1');
-			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+			// console.log('\n--> Evaluate Transaction: GetAllAssets, function returns all the current assets on the ledger');
+			// let result = await contract.evaluateTransaction('QueryCar', 'CAR999'); // TODO QueryCar, CAR200, and intentional error making also recommended
+			// console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+			/*
+						// Now let's try to submit a transaction.
+						// This will be sent to both peers and if both peers endorse the transaction, the endorsed proposal will be sent
+						// to the orderer to be committed by each of the peer's to the channel ledger.
+						console.log('\n--> Submit Transaction: CreateAsset, creates new asset with ID, color, owner, size, and appraisedValue arguments');
+						result = await contract.submitTransaction('CreateAsset', 'asset13', 'yellow', '5', 'Tom', '1300');
+						console.log('*** Result: committed');
+						if (`${result}` !== '') {
+							console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+						}
+			
+						console.log('\n--> Evaluate Transaction: ReadAsset, function returns an asset with a given assetID');
+						result = await contract.evaluateTransaction('ReadAsset', 'asset13');
+						console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+			
+						console.log('\n--> Evaluate Transaction: AssetExists, function returns "true" if an asset with given assetID exist');
+						result = await contract.evaluateTransaction('AssetExists', 'asset1');
+						console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+			
+						console.log('\n--> Submit Transaction: UpdateAsset asset1, change the appraisedValue to 350');
+						await contract.submitTransaction('UpdateAsset', 'asset1', 'blue', '5', 'Tomoko', '350');
+						console.log('*** Result: committed');
+			
+						console.log('\n--> Evaluate Transaction: ReadAsset, function returns "asset1" attributes');
+						result = await contract.evaluateTransaction('ReadAsset', 'asset1');
+						console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+						try {
+							// How about we try a transactions where the executing chaincode throws an error
+							// Notice how the submitTransaction will throw an error containing the error thrown by the chaincode
+							//console.log('\n--> Submit Transaction: UpdateAsset asset70, asset70 does not exist and should return an error');
+							console.log('\n--> Submit Transaction: ChangeCarOwner CAR300, CAR300 does not exist and should return an error');
+							await contract.submitTransaction('ChangeCarOwner', 'CAR300', 'donghun');
+							console.log('******** FAILED to return an error');
+						} catch (error) {
+							console.log(`*** Successfully caught the error: \n    ${error}`);
+						}
+			*/
 			try {
-				// How about we try a transactions where the executing chaincode throws an error
-				// Notice how the submitTransaction will throw an error containing the error thrown by the chaincode
-				//console.log('\n--> Submit Transaction: UpdateAsset asset70, asset70 does not exist and should return an error');
-				console.log('\n--> Submit Transaction: ChangeCarOwner CAR300, CAR300 does not exist and should return an error');
+				console.log('\n--> Submit Transaction: ChangeCarOwner CAR300, NOT exist and should return an error');
 				await contract.submitTransaction('ChangeCarOwner', 'CAR300', 'donghun');
 				console.log('******** FAILED to return an error');
 			} catch (error) {
-				console.log(`*** Successfully caught the error: \n    ${error}`);
+				console.log(error);
 			}
-*/
-            try {
-            console.log('\n--> Submit Transaction: ChangeCarOwner CAR300, NOT exist and should return an error');
-            await contract.submitTransaction('ChangeCarOwner', 'CAR300', 'donghun');
-            console.log('******** FAILED to return an error');
-            } catch (error){
-                console.log(error)
-            }
 
-			result = await contract.evaluateTransaction('QueryAllCars');
-			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+			// result = await contract.evaluateTransaction('QueryAllCars');
+			// console.log(`*** Result: ${prettyJSONString(result.toString())}`);
 
-			await contract.submitTransaction('ChangeAllCarColours', 'tomato');
+			// await contract.submitTransaction('ChangeAllCarColours', 'tomato');
 
-			result = await contract.evaluateTransaction('QueryCar', 'CAR999');
-			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+			// result = await contract.evaluateTransaction('QueryCar', 'CAR999');
+			// console.log(`*** Result: ${prettyJSONString(result.toString())}`);
 
-			result = await contract.evaluateTransaction('QueryAllCars');
+			// result = await contract.evaluateTransaction('QueryAllCars');
+			// console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+
+			result = await contract.evaluateTransaction('GetHistoryForCar', 'CAR9');
+			fs.writeFileSync('QueryAllCars.json', prettyJSONString(result.toString()));
 			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
 		} finally {
 			// Disconnect from the gateway when the application is closing
@@ -190,6 +198,5 @@ async function main() {
 	} catch (error) {
 		console.error(`******** FAILED to run the application: ${error}`);
 	}
-}
-
-main();
+	return result.toString();
+};
