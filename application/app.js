@@ -200,3 +200,4 @@ async function main() {
 	}
 	return result.toString();
 };
+main()
