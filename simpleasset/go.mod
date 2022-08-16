@@ -1,4 +1,4 @@
-module simpleasset.go
+module simpleasset
 
 go 1.16
 

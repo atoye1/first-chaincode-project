@@ -3,21 +3,21 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
-	"github.com/hyperledger/fabic-contract-api-go/contractapi"
+	// "strconv"
+	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
 
 type SmartContract struct {
-	conractapi.Contract 
+	contractapi.Contract 
 }
 
 type Asset struct {
 	Key string `json:"key"`
-	Value string `json:"value"`
+	Value float64 `json:"value"`
 }
 
-func (s *SmartContract) Get(ctx contractapi.TransactionContextInterface, key string) error {
-	assetAsBytes, err := ctx.GetStub().GetState(carNumber)
+func (s *SmartContract) Get(ctx contractapi.TransactionContextInterface, key string) (*Asset, error) {
+	assetAsBytes, err := ctx.GetStub().GetState(key)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to read from SimpleAsset world state. %s", err.Error())
@@ -34,7 +34,7 @@ func (s *SmartContract) Get(ctx contractapi.TransactionContextInterface, key str
 }
 
 func (s *SmartContract) Put(ctx contractapi.TransactionContextInterface, key string, value float64) error {
-	car, err := s.Get(ctx, key)
+	asset, err := s.Get(ctx, key)
 
 	if err != nil {
 		return err
